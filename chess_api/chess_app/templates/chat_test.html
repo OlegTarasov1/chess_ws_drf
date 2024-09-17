@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Room</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        #chatLog {
+            border: 1px solid #ccc;
+            height: 300px;
+            overflow-y: scroll;
+            margin-bottom: 10px;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Chat Room</h1>
+    <input id="roomName" type="text" placeholder="Введите название комнаты..." />
+    <button id="joinButton">Присоединиться к чату</button>
+
+    <div id="chatLog"></div>
+    <input id="messageInput" type="text" placeholder="Введите сообщение..." />
+    <button id="sendButton">Отправить</button>
+
+    <script>
+        let socket;
+
+        document.getElementById('joinButton').onclick = function() {
+            const roomName = document.getElementById('roomName').value;
+            if (roomName) {
+                // Подключение к WebSocket
+                socket = new WebSocket(`ws://127.0.0.1:8000/ws/chat/v1/${roomName}/`);
+
+                socket.onopen = function(event) {
+                    console.log('Подключено к WebSocket');
+                };
+
+                socket.onmessage = function(event) {
+                    const data = JSON.parse(event.data);
+                    const chatLog = document.getElementById('chatLog');
+                    chatLog.innerHTML += `<div><strong>${data.user}:</strong> ${data.message}</div>`;
+                    chatLog.scrollTop = chatLog.scrollHeight;  // Прокручиваем вниз
+                };
+
+                socket.onclose = function(event) {
+                    console.log('Отключено от WebSocket');
+                };
+
+                socket.onerror = function(event) {
+                    console.error('Ошибка WebSocket: ', event);
+                };
+            } else {
+                alert("Пожалуйста, введите название комнаты.");
+            }
+        };
+
+        document.getElementById('sendButton').onclick = function() {
+            const messageInput = document.getElementById('messageInput');
+            const message = messageInput.value;
+            if (message && socket) {
+                socket.send(JSON.stringify({ 'message': message }));
+                messageInput.value = '';  // Очищаем поле ввода
+            } else if (!message) {
+                alert("Пожалуйста, введите сообщение.");
+            }
+        };
+    </script>
+</body>
+</html>

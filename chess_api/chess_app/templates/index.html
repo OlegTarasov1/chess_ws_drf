@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Chess Client</title>
+</head>
+<body>
+    <h1>Enter chat name</h1>
+    <form method="post" action="{% url 'chat_test' %}">
+        {% csrf_token %}
+        <br>
+        <input type="text">
+        <input type="submit">
+    </form>
+</body>
+</html>
