@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Chess</title>
+    <script>
+        let socket;
+
+        function connect() {
+            const roomName = document.getElementById('roomName').value;
+            const wsUrl = `ws://127.0.0.1:8000/ws/chess/v1/${roomName}/`; // Замените на ваш URL
+
+            // Создаем новое WebSocket-соединение
+            socket = new WebSocket(wsUrl);
+
+            // Обработчик события открытия соединения
+            socket.onopen = function() {
+                console.log('Connected to WebSocket server.');
+            };
+
+            // Обработчик события получения сообщения
+            socket.onmessage = function(event) {
+                console.log('Message received:', event.data);
+            };
+
+            // Обработчик события закрытия соединения
+            socket.onclose = function(event) {
+                console.log('Disconnected from WebSocket server.');
+            };
+
+            // Обработчик ошибок
+            socket.onerror = function(error) {
+                console.error('WebSocket error:', error);
+            };
+        }
+    </script>
+</head>
+<body>
+    <h1>Подключение к WebSocket</h1>
+    <input type="text" id="roomName" placeholder="Введите имя комнаты" />
+    <button onclick="connect()">Подключиться</button>
+</body>
+</html>
