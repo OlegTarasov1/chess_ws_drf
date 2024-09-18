@@ -90,11 +90,51 @@ class ActualChess(AsyncWebsocketConsumer):
         )
 
 
+    async def receive(self, text_data):
+        data = json.loads(text_data)
+        if await self.is_your_turn(data['piece'].split('_')):
+            if await self.is_possible(data): # not done yet
+                previous_turn = cache.get(f'{self.room_group_name}_last_turn')
+                user = cache.get(self.room_group_name)[1].remove(previous_turn[1])
+                cache.set(f'{self.room_group_name}_last_turn', ['Black' if previous_turn[0] == 'White' else 'White', user, data], 60*10)
+                await self.channel_layer.group_send(
+                    self.room_group_name,
+                    {
+                        'type': 'send_meta',
+                        'message': 'approve'
+                    }
+                )
+            else:
+                await self.send(json.dumps({
+                    'message': 'you were not allowed to move the piece'
+                }))
+
+        else:
+            await self.send(json.dumps({
+                'message': 'you were not allowed to move the piece'
+            }))
+
+    async def is_your_turn(self, data):
+        last_turn = cache.get(f'{self.room_group_name}_last_turn')
+        users = cache.get(self.room_group_name)
+        users.remove(last_turn[1])
+        if last_turn[0] != data[0] and users[0]['tcp'] == self.scope['client']:
+            return True
+        else:
+            return False
+
+    async def is_possible(self): # not yet done
+        pass
+
+
+
+
     async def init_user_1(self):
         user = self.scope['user']
         user1 = {
             'user': user.username if user.is_authenticated else 'Anonymous',
-            'side': random.choice(['Black', 'White'])
+            'side': random.choice(['Black', 'White']),
+            'tcp': self.scope['client']
         }
         user2 = None
 
@@ -105,13 +145,16 @@ class ActualChess(AsyncWebsocketConsumer):
     async def init_user_2(self, user_1_side):
         user = self.scope['user']
         user2 = {
-            'user': user if user.is_authenticated else 'Anonym',
-            'side': 'Black' if user_1_side == 'White' else 'White'
+            'user': user if user.is_authenticated else 'Anonymous',
+            'side': 'Black' if user_1_side == 'White' else 'White',
+            'tcp': self.scope['client']
         }
 
         meta_game = cache.get(self.room_group_name)
         meta_game[1] = user2
         cache.set(self.room_group_name, meta_game, 60*60)
+
+        cache.set(f'{self.room_group_name}_last_turn', ['Black', meta_game[0] if meta_game[0]['side'] == 'Black'else meta_game[1]], 60*20)        
 
         await self.channel_layer.group_send(
             self.room_group_name,
@@ -128,79 +171,8 @@ class ActualChess(AsyncWebsocketConsumer):
             'message': message
         }))
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     async def disconnect(self, close_code):
         await self.channel_layer.group_discard(
             self.room_group_name,
             self.channel_name
         )
-
-
-
-
-
-
-
-
-
-    #     self.amnt_users.add(self.channel_name)
-
-    #     meta_game = cache.get(self.room_group_name)
-    #     if meta_game == None:
-    #         meta_game['user1'] = {
-    #             'user': self.scope['user'],
-    #             'side': random.choice(['Black', 'White'])
-    #         }
-    #         meta_game['user2'] = None
-    #         meta_game['board'] = None
-
-    #     elif meta_game['user2'] is None:
-    #         user2 = {
-    #             "user": self.scope['user'],
-    #             'side': 'Black' if meta_game['user1']['side'] == 'White' else 'Black'
-    #         }
-        
-    #     if meta_game['board'] is None:
-    #         board = [['' for _ in range(1, 9)] for _ in range(1, 9)]
-            
-    #         for i in [2, 7]:
-    #             for j in range(1, 9):
-    #                 board[i][j] = f'{"B" if i == 2 else "W"}_pawn_{j}'
-
-    #         board[1][1], board[1][8], board[8][1], board[8][8]  = 'B_rook_1', 'B_rook_8', 'W_rook_1', 'W_rook_8'
-    #         board[1][2], board[1][7], board[8][2], board[8][7] = 'B_knight_2', 'B_knight_7', 'W_knight_2', 'W_knight_7'
-    #         board[1][3], board[1][6], board[8][3], board[8][6] = 'B_bishop_3', 'B_bishop_6', 'W_bishop_3', 'W_bishop_6'
-    #         board[1][4], board[1][5], board[8][4], board[8][5] = 'B_queen_4', 'B_king_5', 'W_queen_4', 'W_king_5'
-            
-    #         meta_game['board'] = board
-
-    #     cache.set(self.room_group_name, [meta_game['user1'], meta_game['user2'], meta_game['board']], 60*60)
-        
-    #     await self.channel_layer.group_send(
-    #         self.room_group_name,
-    #         {
-    #             'type': 'send_data',
-    #             'message': meta_game 
-    #         }
-    #     )
-
-    # async def send_data(self, event):
-    #     message = event['message']
-
-    #     await self.send(text_data=json.dumps({
-    #         'message': message
-    #     }))
-
